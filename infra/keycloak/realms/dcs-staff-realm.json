@@ -1,0 +1,127 @@
+{
+  "realm": "dcs-staff",
+  "displayName": "DCS-PIS Staff",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "rememberMe": false,
+  "bruteForceProtected": true,
+  "failureFactor": 5,
+  "permanentLockout": true,
+  "passwordPolicy": "length(14) and notUsername and notEmail and passwordHistory(5)",
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 3600,
+  "ssoSessionMaxLifespan": 43200,
+  "revokeRefreshToken": true,
+  "otpPolicyType": "totp",
+  "otpPolicyAlgorithm": "HmacSHA1",
+  "otpPolicyDigits": 6,
+  "otpPolicyPeriod": 30,
+  "attributes": {"acr.loa.map": "{\"pwd\":1,\"mfa\":2}"},
+  "roles": {
+    "realm": [
+      {"name": "staff_support", "description": "Tenant metadata, platform audit, break-glass requests"},
+      {"name": "staff_ops", "description": "Support + tenant changes, flags, security status"},
+      {"name": "staff_admin", "description": "All platform permissions incl. deprovisioning"}
+    ]
+  },
+  "browserFlow": "staff browser",
+  "authenticationFlows": [
+    {
+      "alias": "staff browser",
+      "description": "Password + OTP always (every session is level 2 / acr 'mfa')",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {"authenticatorFlow": true, "flowAlias": "staff forms", "requirement": "REQUIRED", "priority": 10, "userSetupAllowed": false}
+      ]
+    },
+    {
+      "alias": "staff forms",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {"authenticatorFlow": true, "flowAlias": "staff level 1", "requirement": "CONDITIONAL", "priority": 10, "userSetupAllowed": false},
+        {"authenticatorFlow": true, "flowAlias": "staff level 2", "requirement": "CONDITIONAL", "priority": 20, "userSetupAllowed": false}
+      ]
+    },
+    {
+      "alias": "staff level 1",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {"authenticator": "conditional-level-of-authentication", "authenticatorConfig": "staff-loa-1", "authenticatorFlow": false, "requirement": "REQUIRED", "priority": 10, "userSetupAllowed": false},
+        {"authenticator": "auth-username-password-form", "authenticatorFlow": false, "requirement": "REQUIRED", "priority": 20, "userSetupAllowed": false}
+      ]
+    },
+    {
+      "alias": "staff level 2",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {"authenticator": "conditional-level-of-authentication", "authenticatorConfig": "staff-loa-2", "authenticatorFlow": false, "requirement": "REQUIRED", "priority": 10, "userSetupAllowed": false},
+        {"authenticator": "auth-otp-form", "authenticatorFlow": false, "requirement": "REQUIRED", "priority": 20, "userSetupAllowed": true}
+      ]
+    }
+  ],
+  "authenticatorConfig": [
+    {"alias": "staff-loa-1", "config": {"loa-condition-level": "1", "loa-max-age": "3600"}},
+    {"alias": "staff-loa-2", "config": {"loa-condition-level": "2", "loa-max-age": "3600"}}
+  ],
+  "requiredActions": [
+    {"alias": "CONFIGURE_TOTP", "name": "Configure OTP", "providerId": "CONFIGURE_TOTP", "enabled": true, "defaultAction": true, "priority": 10},
+    {"alias": "UPDATE_PASSWORD", "name": "Update Password", "providerId": "UPDATE_PASSWORD", "enabled": true, "defaultAction": false, "priority": 20}
+  ],
+  "clients": [
+    {
+      "clientId": "dcs-admin",
+      "name": "DCS-PIS admin console",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${DCS_KC_ADMIN_CLIENT_SECRET}",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["http://localhost:3001/*"],
+      "webOrigins": ["http://localhost:3001"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:3001/*",
+        "acr.loa.map": "{\"pwd\":1,\"mfa\":2}",
+        "minimum.acr.value": "mfa",
+        "default.acr.values": "mfa"
+      },
+      "defaultClientScopes": ["web-origins", "acr", "profile", "roles", "basic", "email"],
+      "protocolMappers": [
+        {
+          "name": "dcs-admin-api audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {"included.custom.audience": "dcs-admin-api", "access.token.claim": "true", "id.token.claim": "false"}
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "staff@dcs.local",
+      "email": "staff@dcs.local",
+      "emailVerified": true,
+      "firstName": "Dev",
+      "lastName": "Staff",
+      "enabled": true,
+      "credentials": [{"type": "password", "value": "${DCS_KC_STAFF_PASSWORD}", "temporary": true}],
+      "requiredActions": ["CONFIGURE_TOTP", "UPDATE_PASSWORD"],
+      "realmRoles": ["staff_admin", "default-roles-dcs-staff"]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+[project]
+name = "dcs-vault"
+version = "0.0.1"
+description = "Envelope encryption: per-tenant KMS key + data key, AES-256-GCM with AAD binding (SPEC §3.5)"
+requires-python = ">=3.12,<3.13"
+dependencies = ["cryptography>=43"]
+
+[project.optional-dependencies]
+aws = ["boto3>=1.35"]
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dcs_vault"]

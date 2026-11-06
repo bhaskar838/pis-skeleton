@@ -1,0 +1,50 @@
+/* DCS-PIS branding on top of Keycloak's default login styles (tokens mirror packages/ts/ui/src/theme.css). */
+:root {
+  --dcs-primary: #4338ca;
+  --dcs-foreground: #0f172a;
+  --dcs-muted: #f1f5f9;
+  --dcs-border: #e2e8f0;
+}
+
+.dcs-html,
+.dcs-body {
+  background: var(--dcs-muted) !important;
+  font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--dcs-foreground);
+}
+
+.dcs-header #kc-header-wrapper {
+  color: var(--dcs-primary);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+.dcs-card {
+  border: 1px solid var(--dcs-border);
+  border-radius: 0.75rem !important;
+  box-shadow: 0 10px 30px rgb(15 23 42 / 0.06);
+}
+
+.dcs-btn-primary {
+  background: var(--dcs-primary) !important;
+  border-color: var(--dcs-primary) !important;
+  border-radius: 0.5rem !important;
+}
+
+.dcs-input {
+  border-radius: 0.5rem !important;
+}
+
+a {
+  color: var(--dcs-primary);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --dcs-primary: #a5b4fc;
+    --dcs-foreground: #e2e8f0;
+    --dcs-muted: #020617;
+    --dcs-border: #1e293b;
+  }
+}

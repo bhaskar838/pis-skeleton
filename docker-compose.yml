@@ -1,0 +1,293 @@
+# DCS-PIS local stack (SPEC §15 "local"). `make dev` boots everything; `make reset` wipes volumes.
+# Secrets come from .env (generate with `make env`). Ports: web 3000 · admin 3001 · control-api 8001 ·
+# data-api 8002 · realtime-gw 8003 · Keycloak 8080 · Temporal UI 8088 · Mailpit 8025 · Grafana 3002 · S3 9000.
+
+name: dcs-pis
+
+x-python-env: &python-env
+  DCS_ENV: ${DCS_ENV:-local}
+  DCS_LOG_LEVEL: INFO
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://lgtm:4318
+  SENTRY_DSN: ${SENTRY_DSN:-}
+  DCS_OIDC_ISSUER: http://keycloak.localhost:8080/realms/dcs
+  DCS_STAFF_OIDC_ISSUER: http://keycloak.localhost:8080/realms/dcs-staff
+  DCS_KEY_SERVICE: local
+  DCS_LOCAL_MASTER_KEY: ${DCS_LOCAL_MASTER_KEY:?run make env}
+  DCS_LOCAL_KEY_DIR: /var/lib/dcs/keys
+  DCS_TENANT_DB_HOST: postgres
+  DCS_TENANT_DB_PORT: "5432"
+  DCS_REDIS_URL: redis://redis:6379/0
+  DCS_TEMPORAL_HOST: temporal:7233
+
+x-python-service: &python-service
+  image: dcs-pis/python:local
+  restart: unless-stopped
+  volumes:
+    - dcs-keys:/var/lib/dcs/keys
+
+services:
+  # ------------------------------------------------------------------ infrastructure
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run make env}
+    command: ["postgres", "-c", "max_connections=400", "-c", "log_statement=none"]
+    ports: ["${PG_PORT:-5432}:5432"]
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # MinIO no longer publishes community images; RustFS (Apache-2.0) is an S3-compatible drop-in for dev.
+  s3:
+    image: rustfs/rustfs:latest
+    environment:
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY:-dcs-local}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY:?run make env}
+    ports: ["9000:9000"]
+    volumes: [s3-data:/data]
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 9000 || (echo > /dev/tcp/localhost/9000) 2>/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  temporal:
+    image: temporalio/auto-setup:1.28.1
+    environment:
+      DB: postgres12
+      DB_PORT: "5432"
+      POSTGRES_USER: postgres
+      POSTGRES_PWD: ${POSTGRES_PASSWORD}
+      POSTGRES_SEEDS: postgres
+    depends_on:
+      postgres: {condition: service_healthy}
+    ports: ["7233:7233"]
+    healthcheck:
+      test: ["CMD-SHELL", "tctl --address temporal:7233 cluster health | grep -q SERVING"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  temporal-ui:
+    image: temporalio/ui:2.37.1
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: http://localhost:3000
+    depends_on:
+      temporal: {condition: service_healthy}
+    ports: ["8088:8080"]
+
+  keycloak:
+    build:
+      context: .
+      dockerfile: infra/docker/keycloak.Dockerfile
+    image: dcs-pis/keycloak:local
+    # Optimized start (build done in the image). HTTP only because this is the local stack.
+    command: ["start", "--optimized", "--import-realm", "--http-enabled=true"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?run make env}
+      KC_HOSTNAME: http://keycloak.localhost:8080
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HTTP_ENABLED: "true"
+      # Persistent identities (H2 in dev mode would lose every account on restart).
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: postgres
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      KC_HEALTH_ENABLED: "true"
+      KC_LOG_LEVEL: ${KC_LOG_LEVEL:-info}
+      DCS_KC_WEB_CLIENT_SECRET: ${DCS_KC_WEB_CLIENT_SECRET:?run make env}
+      DCS_KC_ADMIN_CLIENT_SECRET: ${DCS_KC_ADMIN_CLIENT_SECRET:?run make env}
+      DCS_KC_CONTROL_API_CLIENT_SECRET: ${DCS_KC_CONTROL_API_CLIENT_SECRET:?run make env}
+      DCS_KC_STAFF_PASSWORD: ${DCS_KC_STAFF_PASSWORD:?run make env}
+      DCS_KC_LOGIN_THEME: ${DCS_KC_LOGIN_THEME:-keycloak}
+    volumes:
+      - ./infra/keycloak/realms:/opt/keycloak/data/import:ro
+      - ./apps/keycloak-theme/dist_keycloak:/opt/keycloak/providers:ro
+    ports: ["8080:8080"]
+    depends_on:
+      postgres: {condition: service_healthy}
+    networks:
+      default:
+        # Browsers resolve *.localhost to 127.0.0.1, containers resolve this alias: one issuer URL for both.
+        aliases: [keycloak.localhost]
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q UP <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports: ["8025:8025", "1025:1025"]
+
+  clamav:
+    image: clamav/clamav:stable
+    healthcheck:
+      test: ["CMD-SHELL", "clamdcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 180s
+
+  lgtm:
+    image: grafana/otel-lgtm:latest
+    ports: ["3002:3000", "4317:4317", "4318:4318"]
+    healthcheck:  # keep the image's own test; it needs longer on first boot
+      start_period: 180s
+      interval: 15s
+      retries: 20
+
+  # ------------------------------------------------------------------ DCS services
+  control-migrate:
+    <<: *python-service
+    build:
+      context: .
+      dockerfile: infra/docker/python.Dockerfile
+    restart: "no"
+    command: ["python", "-m", "control_api.bootstrap"]
+    environment:
+      DCS_ENV: ${DCS_ENV:-local}
+      DCS_TENANT_ADMIN_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/postgres
+      DCS_CONTROL_OWNER_PASSWORD: ${DCS_CONTROL_OWNER_PASSWORD:?run make env}
+      DCS_CONTROL_APP_PASSWORD: ${DCS_CONTROL_APP_PASSWORD:?run make env}
+      DCS_CONTROL_READER_PASSWORD: ${DCS_CONTROL_READER_PASSWORD:?run make env}
+      DCS_S3_ENDPOINT: http://s3:9000
+      DCS_S3_BUCKET: dcs-data-local
+      DCS_S3_ACCESS_KEY: ${S3_ACCESS_KEY:-dcs-local}
+      DCS_S3_SECRET_KEY: ${S3_SECRET_KEY}
+    depends_on:
+      postgres: {condition: service_healthy}
+      s3: {condition: service_healthy}
+
+  control-api:
+    <<: *python-service
+    command: ["uvicorn", "control_api.main:build", "--factory", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
+    environment: &control-env
+      <<: *python-env
+      DCS_SERVICE_NAME: control-api
+      DCS_CONTROL_DB_URL: postgresql+asyncpg://dcs_control_app:${DCS_CONTROL_APP_PASSWORD}@postgres:5432/dcs_control
+      DCS_TENANT_ADMIN_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/postgres
+      DCS_S3_ENDPOINT: http://s3:9000
+      DCS_S3_BUCKET: dcs-data-local
+      DCS_S3_ACCESS_KEY: ${S3_ACCESS_KEY:-dcs-local}
+      DCS_S3_SECRET_KEY: ${S3_SECRET_KEY}
+      DCS_AWS_REGION: us-east-1
+      DCS_SMTP_HOST: mailpit
+      DCS_SMTP_PORT: "1025"
+      DCS_WEB_BASE_URL: http://localhost:3000
+      DCS_KEYCLOAK_ADMIN_ENABLED: "true"
+      DCS_KEYCLOAK_BASE_URL: http://keycloak.localhost:8080
+      DCS_KEYCLOAK_ADMIN_CLIENT_SECRET: ${DCS_KC_CONTROL_API_CLIENT_SECRET}
+    ports: ["8001:8000"]
+    depends_on:
+      control-migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+      temporal: {condition: service_healthy}
+    healthcheck: &py-health
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=3).status == 200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  control-worker:
+    <<: *python-service
+    command: ["python", "-m", "control_api.worker"]
+    environment:
+      <<: *control-env
+      DCS_SERVICE_NAME: control-worker
+    depends_on:
+      control-migrate: {condition: service_completed_successfully}
+      temporal: {condition: service_healthy}
+      redis: {condition: service_healthy}
+
+  data-api:
+    <<: *python-service
+    command: ["uvicorn", "data_api.main:build", "--factory", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
+    environment:
+      <<: *python-env
+      DCS_SERVICE_NAME: data-api
+      DCS_CONTROL_READER_URL: postgresql+asyncpg://dcs_control_reader:${DCS_CONTROL_READER_PASSWORD}@postgres:5432/dcs_control
+    ports: ["8002:8000"]
+    depends_on:
+      control-migrate: {condition: service_completed_successfully}
+    healthcheck: *py-health
+
+  realtime-gw:
+    <<: *python-service
+    command: ["uvicorn", "realtime_gw.main:build", "--factory", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      <<: *python-env
+      DCS_SERVICE_NAME: realtime-gw
+      DCS_CONTROL_API_URL: http://control-api:8000
+      DCS_ALLOWED_ORIGINS: '["http://localhost:3000"]'
+    ports: ["8003:8000"]
+    depends_on:
+      redis: {condition: service_healthy}
+      control-api: {condition: service_healthy}
+    healthcheck: *py-health
+
+  # ------------------------------------------------------------------ apps
+  web:
+    build:
+      context: .
+      dockerfile: infra/docker/node.Dockerfile
+      args: {APP: web}
+    image: dcs-pis/web:local
+    restart: unless-stopped
+    environment:
+      AUTH_SECRET: ${AUTH_SECRET_WEB:?run make env}
+      AUTH_URL: http://localhost:3000
+      AUTH_TRUST_HOST: "true"
+      AUTH_KEYCLOAK_ID: dcs-web
+      AUTH_KEYCLOAK_SECRET: ${DCS_KC_WEB_CLIENT_SECRET}
+      AUTH_KEYCLOAK_ISSUER: http://keycloak.localhost:8080/realms/dcs
+      CONTROL_API_URL: http://control-api:8000
+      DATA_API_URL: http://data-api:8000
+      NEXT_PUBLIC_REALTIME_URL: ws://localhost:8003/v1/events
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://lgtm:4318
+    ports: ["3000:3000"]
+    depends_on:
+      control-api: {condition: service_healthy}
+
+  admin:
+    build:
+      context: .
+      dockerfile: infra/docker/node.Dockerfile
+      args: {APP: admin, AUTH_KEYCLOAK_ISSUER: "http://keycloak.localhost:8080/realms/dcs-staff"}
+    image: dcs-pis/admin:local
+    restart: unless-stopped
+    environment:
+      AUTH_SECRET: ${AUTH_SECRET_ADMIN:?run make env}
+      AUTH_URL: http://localhost:3001
+      AUTH_TRUST_HOST: "true"
+      AUTH_KEYCLOAK_ID: dcs-admin
+      AUTH_KEYCLOAK_SECRET: ${DCS_KC_ADMIN_CLIENT_SECRET}
+      AUTH_KEYCLOAK_ISSUER: http://keycloak.localhost:8080/realms/dcs-staff
+      CONTROL_API_URL: http://control-api:8000
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://lgtm:4318
+    ports: ["3001:3000"]
+    depends_on:
+      control-api: {condition: service_healthy}
+
+volumes:
+  pg-data:
+  s3-data:
+  dcs-keys:

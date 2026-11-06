@@ -1,0 +1,159 @@
+{
+  "realm": "dcs",
+  "displayName": "DCS-PIS",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "verifyEmail": true,
+  "resetPasswordAllowed": true,
+  "rememberMe": false,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "failureFactor": 10,
+  "permanentLockout": false,
+  "maxFailureWaitSeconds": 900,
+  "passwordPolicy": "length(12) and notUsername and notEmail and passwordHistory(3)",
+  "loginTheme": "${DCS_KC_LOGIN_THEME:keycloak}",
+  "accountTheme": "keycloak.v3",
+  "emailTheme": "keycloak",
+  "internationalizationEnabled": true,
+  "supportedLocales": ["en"],
+  "defaultLocale": "en",
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 43200,
+  "ssoSessionMaxLifespan": 604800,
+  "offlineSessionIdleTimeout": 604800,
+  "revokeRefreshToken": true,
+  "refreshTokenMaxReuse": 0,
+  "otpPolicyType": "totp",
+  "otpPolicyAlgorithm": "HmacSHA1",
+  "otpPolicyDigits": 6,
+  "otpPolicyPeriod": 30,
+  "otpPolicyLookAheadWindow": 1,
+  "webAuthnPolicyRpEntityName": "DCS-PIS",
+  "webAuthnPolicyUserVerificationRequirement": "preferred",
+  "attributes": {
+    "acr.loa.map": "{\"pwd\":1,\"mfa\":2}",
+    "frontendUrl": ""
+  },
+  "smtpServer": {
+    "host": "mailpit",
+    "port": "1025",
+    "from": "no-reply@dcs-pis.local",
+    "fromDisplayName": "DCS-PIS",
+    "auth": "false",
+    "ssl": "false",
+    "starttls": "false"
+  },
+  "browserFlow": "dcs browser",
+  "authenticationFlows": [
+    {
+      "alias": "dcs browser",
+      "description": "Cookie, then step-up levels: 1 = password, 2 = password + TOTP (acr 'mfa'); TOTP is enrolled on first use",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {"authenticator": "auth-cookie", "authenticatorFlow": false, "requirement": "ALTERNATIVE", "priority": 10, "userSetupAllowed": false},
+        {"authenticatorFlow": true, "flowAlias": "dcs browser forms", "requirement": "ALTERNATIVE", "priority": 20, "userSetupAllowed": false}
+      ]
+    },
+    {
+      "alias": "dcs browser forms",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {"authenticatorFlow": true, "flowAlias": "dcs level 1", "requirement": "CONDITIONAL", "priority": 10, "userSetupAllowed": false},
+        {"authenticatorFlow": true, "flowAlias": "dcs level 2", "requirement": "CONDITIONAL", "priority": 20, "userSetupAllowed": false}
+      ]
+    },
+    {
+      "alias": "dcs level 1",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {"authenticator": "conditional-level-of-authentication", "authenticatorConfig": "dcs-loa-1", "authenticatorFlow": false, "requirement": "REQUIRED", "priority": 10, "userSetupAllowed": false},
+        {"authenticator": "auth-username-password-form", "authenticatorFlow": false, "requirement": "REQUIRED", "priority": 20, "userSetupAllowed": false}
+      ]
+    },
+    {
+      "alias": "dcs level 2",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {"authenticator": "conditional-level-of-authentication", "authenticatorConfig": "dcs-loa-2", "authenticatorFlow": false, "requirement": "REQUIRED", "priority": 10, "userSetupAllowed": false},
+        {"authenticator": "auth-otp-form", "authenticatorFlow": false, "requirement": "REQUIRED", "priority": 20, "userSetupAllowed": true}
+      ]
+    }
+  ],
+  "authenticatorConfig": [
+    {"alias": "dcs-loa-1", "config": {"loa-condition-level": "1", "loa-max-age": "43200"}},
+    {"alias": "dcs-loa-2", "config": {"loa-condition-level": "2", "loa-max-age": "43200"}}
+  ],
+  "requiredActions": [
+    {"alias": "CONFIGURE_TOTP", "name": "Configure OTP", "providerId": "CONFIGURE_TOTP", "enabled": true, "defaultAction": false, "priority": 10},
+    {"alias": "webauthn-register", "name": "Webauthn Register", "providerId": "webauthn-register", "enabled": true, "defaultAction": false, "priority": 20},
+    {"alias": "VERIFY_EMAIL", "name": "Verify Email", "providerId": "VERIFY_EMAIL", "enabled": true, "defaultAction": false, "priority": 30},
+    {"alias": "UPDATE_PASSWORD", "name": "Update Password", "providerId": "UPDATE_PASSWORD", "enabled": true, "defaultAction": false, "priority": 40},
+    {"alias": "TERMS_AND_CONDITIONS", "name": "Terms and Conditions", "providerId": "TERMS_AND_CONDITIONS", "enabled": false, "defaultAction": false, "priority": 50}
+  ],
+  "clients": [
+    {
+      "clientId": "dcs-web",
+      "name": "DCS-PIS web app",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${DCS_KC_WEB_CLIENT_SECRET}",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["http://localhost:3000/*"],
+      "webOrigins": ["http://localhost:3000"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:3000/*",
+        "acr.loa.map": "{\"pwd\":1,\"mfa\":2}",
+        "minimum.acr.value": "pwd"
+      },
+      "defaultClientScopes": ["web-origins", "acr", "profile", "roles", "basic", "email"],
+      "optionalClientScopes": ["offline_access"],
+      "protocolMappers": [
+        {
+          "name": "dcs-api audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {"included.custom.audience": "dcs-api", "access.token.claim": "true", "id.token.claim": "false"}
+        }
+      ]
+    },
+    {
+      "clientId": "dcs-control-api",
+      "name": "control-api service account (tenant groups)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${DCS_KC_CONTROL_API_CLIENT_SECRET}",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-dcs-control-api",
+      "enabled": true,
+      "serviceAccountClientId": "dcs-control-api",
+      "clientRoles": {"realm-management": ["manage-users", "query-groups", "view-users"]}
+    }
+  ]
+}

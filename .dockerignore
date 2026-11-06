@@ -1,0 +1,15 @@
+.git
+.env
+.env.*
+!.env.example
+**/node_modules
+**/.next
+**/.turbo
+**/__pycache__
+**/.mypy_cache
+**/.ruff_cache
+**/.pytest_cache
+.venv
+infra/local
+apps/keycloak-theme/dist_keycloak
+DCS_PIS_Exoskeleton_Build_Spec.md

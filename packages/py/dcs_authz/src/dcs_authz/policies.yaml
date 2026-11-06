@@ -1,0 +1,129 @@
+# DCS-PIS roles and permissions (SPEC §8.3).
+# The UI hides what a role cannot do; every API route enforces it with dcs_authz.
+# Changing this file changes a security boundary: update tests/test_matrix.py in the same commit.
+version: 1
+
+permissions:
+  # ---- customer scope -------------------------------------------------------
+  org:read: View the organisation profile
+  org:write: Edit the organisation profile
+  org:delete: Delete the organisation (tenant deprovisioning)
+  members:read: View team members and pending invites
+  members:invite: Invite users
+  members:manage: Change roles and remove members
+  security:read: View security settings (MFA policy, sessions, API keys)
+  security:write: Change security settings
+  audit:read: View the audit log
+  notifications:read: Read own notifications and preferences
+  flags:read: Read effective feature flags
+  billing:read: View plan, invoices and usage
+  billing:write: Change plan, add-ons and payment methods
+  sources:read: View data sources and sync runs
+  sources:write: Connect, configure and disconnect sources
+  studio:read: View the data studio (datasets, profiles, model explorer)
+  mapping:read: View mapping specs
+  mapping:write: Edit mapping specs
+  mapping:approve: Accept mapping specs
+  er:review: Decide entity-resolution clusters
+  dq:review: Review data-quality failures
+  dq:waive: Waive data-quality rules (with reason)
+  pipeline:read: View pipeline versions, runs and lineage
+  pipeline:replay: Replay or roll back the tenant pipeline
+  tools:read: View the toolkit and marketplace
+  tools:run: Run tools and view runs
+  tools:manage: Activate, pause and configure tools
+  insights:read: View insights
+  actions:approve_basic: Approve or reject level 0-1 action proposals
+  actions:approve_elevated: Approve or reject level 2+ action proposals
+  governance:read: View data-governance settings
+  governance:write: Change data-governance settings (LLM mode, retention, DSR, export)
+
+  # ---- platform (DCS staff) scope -------------------------------------------
+  platform:dashboard:read: View the platform dashboard
+  platform:tenants:read: View tenant metadata
+  platform:tenants:write: Change tenant metadata (plan, status)
+  platform:tenants:deprovision: Deprovision a tenant
+  platform:flags:read: View feature flags and system settings
+  platform:flags:write: Change feature flags and system settings
+  platform:audit:read: View platform and staff audit events
+  platform:security:read: View hash-chain verification status
+  platform:breakglass:request: Request break-glass access to tenant data
+  platform:breakglass:approve: Approve break-glass requests
+
+roles:
+  # ---- customer roles ------------------------------------------------------
+  owner:
+    scope: customer
+    mfa_required: true
+    permissions: ["*"]
+    can_assign: [owner, admin, data_manager, analyst, viewer, billing]
+  admin:
+    scope: customer
+    mfa_required: true
+    permissions: ["*"]
+    exclude: [org:delete, billing:write, governance:write]
+    can_assign: [admin, data_manager, analyst, viewer, billing]
+  data_manager:
+    scope: customer
+    permissions:
+      - org:read
+      - notifications:read
+      - flags:read
+      - sources:read
+      - sources:write
+      - studio:read
+      - mapping:read
+      - mapping:write
+      - mapping:approve
+      - er:review
+      - dq:review
+      - dq:waive
+      - pipeline:read
+      - pipeline:replay
+      - tools:read
+      - insights:read
+  analyst:
+    scope: customer
+    permissions:
+      - org:read
+      - notifications:read
+      - flags:read
+      - studio:read
+      - mapping:read
+      - pipeline:read
+      - tools:read
+      - tools:run
+      - insights:read
+      - actions:approve_basic
+  viewer:
+    scope: customer
+    permissions: [org:read, notifications:read, flags:read, insights:read]
+  billing:
+    scope: customer
+    permissions: [org:read, notifications:read, flags:read, billing:read, billing:write]
+
+  # ---- DCS staff roles (staff realm only) ------------------------------------
+  staff_support:
+    scope: platform
+    mfa_required: true
+    permissions:
+      - platform:dashboard:read
+      - platform:tenants:read
+      - platform:audit:read
+      - platform:breakglass:request
+  staff_ops:
+    scope: platform
+    mfa_required: true
+    permissions:
+      - platform:dashboard:read
+      - platform:tenants:read
+      - platform:tenants:write
+      - platform:flags:read
+      - platform:flags:write
+      - platform:audit:read
+      - platform:security:read
+      - platform:breakglass:request
+  staff_admin:
+    scope: platform
+    mfa_required: true
+    permissions: ["*"]

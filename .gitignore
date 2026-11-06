@@ -1,0 +1,43 @@
+# secrets & local env
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+infra/local/keys/
+
+# python
+.venv/
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+*.egg-info/
+dist/
+build/
+
+# node
+node_modules/
+.next/
+.turbo/
+out/
+coverage/
+*.tsbuildinfo
+playwright-report/
+test-results/
+apps/keycloak-theme/dist_keycloak/
+apps/keycloak-theme/dist/
+
+# artefacts
+sbom*.json
+*.log
+.DS_Store
+Thumbs.db
+
+# the original spec lives at docs/SPEC.md
+/DCS_PIS_Exoskeleton_Build_Spec.md

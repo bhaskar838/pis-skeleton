@@ -1,0 +1,133 @@
+# DCS-PIS CI (SPEC §13 P0-T3, §14.1): lint, type-check, unit, integration, isolation (blocking),
+# web build + tests, image build, SBOM, vulnerability and secret scans, e2e smoke.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  UV_PYTHON: "3.12"
+
+jobs:
+  python-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with: {enable-cache: true}
+      - run: uv sync --frozen
+      - run: uv run ruff check packages services tests conftest.py
+      - run: uv run ruff format --check packages services tests conftest.py
+      - run: uv run mypy -p dcs_common -p dcs_authz -p dcs_vault -p dcs_cbm -p control_api -p data_api -p realtime_gw
+
+  python-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with: {enable-cache: true}
+      - run: uv sync --frozen
+      - name: Libraries (coverage thresholds SPEC §14.3)
+        run: |
+          uv run pytest packages/py/dcs_authz -q --cov=dcs_authz --cov-branch --cov-fail-under=95
+          uv run pytest packages/py/dcs_vault -q --cov=dcs_vault --cov-branch --cov-fail-under=95
+          uv run pytest packages/py/dcs_common -q --cov=dcs_common --cov-branch --cov-fail-under=90
+      - run: uv run pytest services -q -m "not integration"
+
+  python-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with: {enable-cache: true}
+      - run: uv sync --frozen
+      - name: Services against real Postgres + S3 (testcontainers)
+        run: >
+          uv run pytest services -q -W ignore::DeprecationWarning
+          --cov=control_api --cov=data_api --cov=realtime_gw --cov-branch --cov-fail-under=80
+      - name: Tenant isolation suite (blocking)
+        run: uv run pytest tests/isolation -q -W ignore::DeprecationWarning
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 22, cache: pnpm}
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r --if-present lint
+      - run: pnpm -r --if-present typecheck
+      - run: pnpm -r --if-present test
+      - run: pnpm --filter @dcs/web --filter @dcs/admin build
+
+  keycloak-theme:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 22}
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: "21"}
+      - name: Build Keycloakify theme JAR (needs Maven, preinstalled on ubuntu runners)
+        working-directory: apps/keycloak-theme
+        run: npm ci && npm run build-theme
+      - uses: actions/upload-artifact@v4
+        with: {name: keycloak-theme, path: apps/keycloak-theme/dist_keycloak/*.jar}
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env: {GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"}
+      - name: trivy (filesystem, no criticals)
+        uses: aquasecurity/trivy-action@0.28.0
+        with: {scan-type: fs, severity: CRITICAL, exit-code: "1", ignore-unfixed: true}
+
+  images:
+    runs-on: ubuntu-latest
+    needs: [python-quality, python-unit, web]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build Python image
+        run: docker build -f infra/docker/python.Dockerfile -t dcs-pis/python:ci .
+      - name: Build web image
+        run: docker build -f infra/docker/node.Dockerfile --build-arg APP=web -t dcs-pis/web:ci .
+      - name: Build admin image
+        run: docker build -f infra/docker/node.Dockerfile --build-arg APP=admin -t dcs-pis/admin:ci .
+      - name: SBOM (syft)
+        uses: anchore/sbom-action@v0
+        with: {image: "dcs-pis/python:ci", format: cyclonedx-json, output-file: sbom-python.json}
+      - name: Vulnerability scan (grype, fail on critical)
+        uses: anchore/scan-action@v6
+        with: {image: "dcs-pis/python:ci", fail-build: true, severity-cutoff: critical}
+      - uses: actions/upload-artifact@v4
+        with: {name: sbom, path: sbom-python.json}
+
+  e2e-smoke:
+    runs-on: ubuntu-latest
+    needs: [images]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 22, cache: pnpm}
+      - run: python3 scripts/gen_env.py
+      - run: mkdir -p apps/keycloak-theme/dist_keycloak && docker compose up -d --build --wait
+      - run: pnpm install --frozen-lockfile && pnpm --filter @dcs/e2e exec playwright install --with-deps chromium
+      - run: pnpm --filter @dcs/e2e test
+      - if: failure()
+        run: docker compose logs --tail=200

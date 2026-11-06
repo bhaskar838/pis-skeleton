@@ -1,0 +1,22 @@
+[project]
+name = "dcs-realtime-gw"
+version = "0.0.1"
+description = "WebSocket fan-out of org-scoped live events (job status, notifications)"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "dcs-common",
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.32",
+  "redis>=5.2",
+  "httpx>=0.27",
+]
+
+[project.scripts]
+dcs-realtime-gw = "realtime_gw.main:run"
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/realtime_gw"]

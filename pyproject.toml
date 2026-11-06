@@ -1,0 +1,118 @@
+[project]
+name = "dcs-pis-workspace"
+version = "0.0.0"
+description = "DCS-PIS Exoskeleton monorepo (uv workspace root)"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "dcs-common",
+  "dcs-authz",
+  "dcs-vault",
+  "dcs-cbm",
+  "dcs-control-api",
+  "dcs-data-api",
+  "dcs-realtime-gw",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = [
+  "packages/py/dcs_common",
+  "packages/py/dcs_authz",
+  "packages/py/dcs_vault",
+  "packages/py/dcs_cbm",
+  "services/control_api",
+  "services/data_api",
+  "services/realtime_gw",
+]
+
+[tool.uv.sources]
+dcs-common = { workspace = true }
+dcs-authz = { workspace = true }
+dcs-vault = { workspace = true }
+dcs-cbm = { workspace = true }
+dcs-control-api = { workspace = true }
+dcs-data-api = { workspace = true }
+dcs-realtime-gw = { workspace = true }
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3",
+  "pytest-asyncio>=0.24",
+  "pytest-cov>=6.0",
+  "hypothesis>=6.115",
+  "mypy>=1.13",
+  "ruff>=0.8",
+  "testcontainers[postgres,redis]>=4.8",
+  "moto[kms,s3]>=5.0",
+  "respx>=0.21",
+  "asgi-lifespan>=2.1",
+  "types-PyYAML>=6.0",
+  "boto3-stubs[kms,s3]>=1.35",
+  "pre-commit>=4.0",
+  "fakeredis>=2.26",
+]
+
+# ---------------------------------------------------------------- ruff
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+extend-exclude = ["**/node_modules", "apps", "packages/ts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "N", "S", "ASYNC", "C4", "SIM", "RUF", "PT", "TID", "BLE", "DTZ"]
+ignore = [
+  "S608",   # SQL built from validated identifiers only (see dcs_common.sqlident)
+  "RUF001", "RUF002", "RUF003",  # typographic characters in docs are intentional
+  "UP046",  # keep typing.Generic for pydantic generic models
+]
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 120
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S101", "S105", "S106", "S311", "BLE001", "ASYNC", "PT018", "PT011", "B017"]
+"conftest.py" = ["S101"]
+"**/migrations/**" = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["dcs_common", "dcs_authz", "dcs_vault", "dcs_cbm", "control_api", "data_api", "realtime_gw"]
+
+# ---------------------------------------------------------------- mypy
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["testcontainers.*", "moto.*", "alembic.*", "sentry_sdk.*", "opentelemetry.*", "asyncpg.*"]
+ignore_missing_imports = true
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = false
+
+# ---------------------------------------------------------------- pytest
+[tool.pytest.ini_options]
+addopts = "--import-mode=importlib -ra --strict-markers"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+markers = [
+  "integration: needs Docker (testcontainers): Postgres, Redis, MinIO",
+  "isolation: cross-tenant access tests generated from OpenAPI",
+]
+filterwarnings = ["ignore::DeprecationWarning:testcontainers.*"]
+
+[tool.coverage.run]
+branch = true
+concurrency = ["thread", "greenlet"]  # SQLAlchemy async runs DB calls in greenlets
+omit = ["**/tests/**", "**/migrations/**", "**/control_api/testing.py"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_also = ["if TYPE_CHECKING:", "raise NotImplementedError", "@overload", "\\.\\.\\."]

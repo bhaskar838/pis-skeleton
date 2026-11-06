@@ -1,0 +1,5 @@
+{
+  "extends": "@dcs/config/tsconfig.base.json",
+  "compilerOptions": { "jsx": "react-jsx", "types": ["vitest/globals", "@testing-library/jest-dom"] },
+  "include": ["src", "vitest.config.ts", "vitest.setup.ts"]
+}

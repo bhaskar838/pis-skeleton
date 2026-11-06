@@ -1,0 +1,85 @@
+/*
+ * DCS-PIS design tokens (SPEC §9.4). Light + dark themes follow the OS setting.
+ * Semantic tokens only; components never use raw palette colours. Contrast checked for WCAG 2.1 AA.
+ * Apps: `@import "tailwindcss"; @import "@dcs/ui/theme.css"; @source "../../packages/ts/ui/src";`
+ */
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  --color-background: var(--dcs-background);
+  --color-foreground: var(--dcs-foreground);
+  --color-card: var(--dcs-card);
+  --color-card-foreground: var(--dcs-foreground);
+  --color-muted: var(--dcs-muted);
+  --color-muted-foreground: var(--dcs-muted-foreground);
+  --color-border: var(--dcs-border);
+  --color-input: var(--dcs-border);
+  --color-ring: var(--dcs-primary);
+  --color-primary: var(--dcs-primary);
+  --color-primary-foreground: var(--dcs-primary-foreground);
+  --color-accent: var(--dcs-accent);
+  --color-accent-foreground: var(--dcs-foreground);
+  --color-destructive: var(--dcs-destructive);
+  --color-destructive-foreground: #ffffff;
+  --color-success: var(--dcs-success);
+  --color-warning: var(--dcs-warning);
+  --color-sidebar: var(--dcs-sidebar);
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+}
+
+:root {
+  --dcs-background: #ffffff;
+  --dcs-foreground: #0f172a;
+  --dcs-card: #ffffff;
+  --dcs-muted: #f1f5f9;
+  --dcs-muted-foreground: #475569;
+  --dcs-border: #e2e8f0;
+  --dcs-primary: #4338ca;
+  --dcs-primary-foreground: #ffffff;
+  --dcs-accent: #eef2ff;
+  --dcs-destructive: #b91c1c;
+  --dcs-success: #15803d;
+  --dcs-warning: #a16207;
+  --dcs-sidebar: #f8fafc;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --dcs-background: #020617;
+    --dcs-foreground: #e2e8f0;
+    --dcs-card: #0f172a;
+    --dcs-muted: #1e293b;
+    --dcs-muted-foreground: #94a3b8;
+    --dcs-border: #1e293b;
+    --dcs-primary: #a5b4fc;
+    --dcs-primary-foreground: #0f172a;
+    --dcs-accent: #1e1b4b;
+    --dcs-destructive: #f87171;
+    --dcs-success: #4ade80;
+    --dcs-warning: #facc15;
+    --dcs-sidebar: #0b1220;
+    color-scheme: dark;
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  body {
+    background: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+}

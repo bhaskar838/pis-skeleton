@@ -1,0 +1,4 @@
+{
+  "extends": "@dcs/config/tsconfig.base.json",
+  "include": ["src"]
+}
