@@ -30,7 +30,6 @@ class ControlSettings(DcsSettings):
     staff_oidc_issuer: str = "http://keycloak.localhost:8080/realms/dcs-staff"
     staff_oidc_audience: str = "dcs-admin-api"
     staff_oidc_jwks_url: str | None = None
-    mfa_enforce: bool = True
     require_verified_email: bool = True
     keycloak_admin_enabled: bool = False
     keycloak_base_url: str = "http://keycloak.localhost:8080"

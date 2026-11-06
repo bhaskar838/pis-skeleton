@@ -17,7 +17,7 @@ Environment for all evidence: Windows 11, Docker Desktop 28 (8 GB VM — half th
 
 ## Test summary
 
-unit: authz 432 ✓ · vault 56 ✓ · common 95 ✓ · control-api unit 24 ✓ · web 21 ✓ · admin 6 ✓ · ui 11 ✓ · api-client 4 ✓
+unit: authz 432 ✓ · vault 56 ✓ · common 99 ✓ · control-api unit 29 ✓ · web 21 ✓ · admin 6 ✓ · ui 11 ✓ · api-client 4 ✓
 integration (testcontainers Postgres 16 + pgvector, RustFS S3, Temporal test server): 111 ✓ incl. isolation
 isolation: OpenAPI-generated; 29 control-api + 1 data-api routes classified; every tenant route attacked with tenant B's IDs and B's org header → 403/404, victim objects unchanged ✓
 e2e (Playwright vs compose stack): 4/4 ✓ — sign-up → e-mail verification → TOTP enrolment → home (`active`); invite → register → accept → limited nav + forbidden; security headers; staff first login → M-02
@@ -53,5 +53,6 @@ None of the §17 contracts are touched in Phase 0. ADR-0001…0010 written (`doc
 
 ## Go / No-Go: ☐ GO ☐ NO-GO   — signed: …
 
-Builder's assessment: all six acceptance criteria have evidence. Recommend GO. Founder answers to OPEN_QUESTIONS
-Q1–Q8 are still requested (conservative defaults are in place meanwhile). After sign-off: tag `v0.0.0`.
+Builder's assessment: all six acceptance criteria have evidence. Recommend GO. OPEN_QUESTIONS Q1–Q8 resolved on
+2026-11-06 (Q3 extended the London region to EU outermost regions and UK Crown Dependencies; Q5 now refuses
+`DCS_MFA_ENFORCE=false` in staging/prod). After sign-off: tag `v0.0.0`.

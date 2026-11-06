@@ -23,7 +23,6 @@ class DataSettings(DcsSettings):
     oidc_issuer: str = "http://keycloak.localhost:8080/realms/dcs"
     oidc_audience: str = "dcs-api"
     oidc_jwks_url: str | None = None
-    mfa_enforce: bool = True
 
     key_service: Literal["local", "aws"] = "local"
     local_master_key: SecretStr = SecretStr("")

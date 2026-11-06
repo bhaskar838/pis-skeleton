@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import AliasChoices, Field, SecretStr
+from pydantic import AliasChoices, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 Environment = Literal["local", "ci", "staging", "prod"]
@@ -36,7 +36,15 @@ class DcsSettings(BaseSettings):
     sentry_dsn: SecretStr | None = Field(
         default=None, validation_alias=AliasChoices("SENTRY_DSN", "DCS_SENTRY_DSN")
     )
+    # MFA for Owner/Admin/staff (SPEC §8.3, OPEN_QUESTIONS Q5). May be switched off for local/CI only.
+    mfa_enforce: bool = True
 
     @property
     def is_production_like(self) -> bool:
         return self.env in ("staging", "prod")
+
+    @model_validator(mode="after")
+    def _mfa_cannot_be_disabled_outside_dev(self) -> Self:
+        if self.is_production_like and not self.mfa_enforce:
+            raise ValueError(f"DCS_MFA_ENFORCE=false is not allowed when DCS_ENV={self.env}")
+        return self

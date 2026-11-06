@@ -22,6 +22,6 @@
 - Nonce-based CSP for the Next.js apps → P9.
 - Break-glass access flow (M-03 / M-12 show empty states) → P9.
 
-## Open questions awaiting founder
-See `docs/OPEN_QUESTIONS.md` (F1–F6 from the spec, Q1–Q8 raised during Phase 0, each with the conservative default
-currently applied).
+## Open questions
+See `docs/OPEN_QUESTIONS.md`. Resolved 2026-11-06: Q1–Q8 and F5 (Q7's retention period awaits legal review).
+F2 proposed (confirm before P2). Still with the founder: F1 (P8), F3 (P6), F4 and F6 (P9).
