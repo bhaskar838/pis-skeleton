@@ -66,7 +66,7 @@ test-web: ## Frontend unit tests
 	$(PNPM) -r --if-present test
 
 test-e2e: ## Playwright against a fresh compose stack (`make reset dev` first: the staff journey is a first login)
-	set -a; . ./.env; set +a; E2E_STAFF_PASSWORD="$$DCS_KC_STAFF_PASSWORD" $(PNPM) --filter @dcs/e2e test
+	set -a; . ./.env; set +a; E2E_STAFF_PASSWORD="$$DCS_KC_STAFF_PASSWORD" $(PNPM) --filter @dcs/e2e e2e
 
 # ------------------------------------------------------------------------------------------- quality
 lint: ## ruff + eslint
