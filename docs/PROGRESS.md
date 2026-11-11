@@ -3,6 +3,7 @@
 | Phase | Status | Started | Gate passed | Tag | Notes |
 |---|---|---|---|---|---|
 | P0 Foundations | ✅ passed | 2026-11-06 | 2026-11-11 | v0.0.0 | GO signed by the founder; evidence in `docs/phases/PHASE_0_GATE.md` |
+| P0.5 Control Panel (founder-inserted, ADR-0011/0012) | 🟦 in progress | 2026-11-11 | | | Plan: `docs/phases/PHASE_0_5_PLAN.md` |
 | P1 Floor 1a: Files & Raw Zone | ⬜ not started | | | | |
 | P2 Floor 2a: Profiling, CBM, LLM Mapping, Transform | ⬜ not started | | | | |
 | P3 Floor 3: Engine Bay & Marketplace | ⬜ not started | | | | |
@@ -23,5 +24,5 @@
 - Break-glass access flow (M-03 / M-12 show empty states) → P9.
 
 ## Open questions
-See `docs/OPEN_QUESTIONS.md`. Resolved 2026-11-06: Q1–Q8 and F5 (Q7's retention period awaits legal review).
-F2 proposed (confirm before P2). Still with the founder: F1 (P8), F3 (P6), F4 and F6 (P9).
+See `docs/OPEN_QUESTIONS.md`. All resolved except F2 (proposed, confirm before P2). Deferred by the founder: Q7's
+retention period (after app completion), F6's final product name.
