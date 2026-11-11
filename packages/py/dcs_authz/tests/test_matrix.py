@@ -55,6 +55,11 @@ ALL_PLATFORM = {
     "platform:security:read",
     "platform:breakglass:request",
     "platform:breakglass:approve",
+    # control panel (Phase 0.5, ADR-0011)
+    "platform:config:read",
+    "platform:config:write",
+    "platform:secrets:write",
+    "platform:regions:write",
 }
 
 EXPECTED: dict[str, set[str]] = {
@@ -97,6 +102,7 @@ EXPECTED: dict[str, set[str]] = {
         "platform:tenants:read",
         "platform:audit:read",
         "platform:breakglass:request",
+        "platform:config:read",
     },
     "staff_ops": {
         "platform:dashboard:read",
@@ -107,6 +113,8 @@ EXPECTED: dict[str, set[str]] = {
         "platform:audit:read",
         "platform:security:read",
         "platform:breakglass:request",
+        "platform:config:read",
+        "platform:config:write",
     },
     "staff_admin": set(ALL_PLATFORM),
 }

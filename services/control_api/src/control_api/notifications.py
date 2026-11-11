@@ -67,7 +67,9 @@ async def notify(
             created.append(n)
         if email and uid in emails:
             text = f"{EVENT_TYPES[event_type]}.\n\n{payload.get('message', '')}\n\n{link or ''}".strip()
-            await mailer.send(Mail(to=emails[uid], subject=f"DCS-PIS: {EVENT_TYPES[event_type]}", text=text))
+            await mailer.send(
+                Mail(to=emails[uid], subject=f"{{product}}: {EVENT_TYPES[event_type]}", text=text)
+            )
     await session.flush()
     for n in created:
         await publisher.publish(

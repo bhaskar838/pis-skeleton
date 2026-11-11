@@ -3,7 +3,7 @@
 * Customer routes take the active org from the ``X-DCS-Org`` header and re-check an **active** membership on
   every request. A missing membership answers 404, so org IDs cannot be probed (OPEN_QUESTIONS Q1).
 * Permissions are evaluated from the membership role on every request, so role changes apply immediately.
-* Owner/Admin (and all staff) need an MFA-authenticated token (OPEN_QUESTIONS Q5).
+* Owner/Admin (and all staff) need an MFA-authenticated token, in every environment (OPEN_QUESTIONS Q5).
 """
 
 from __future__ import annotations
@@ -117,7 +117,7 @@ async def org_context(
     if row is None or row.status == "deleted":
         raise not_found()
     role: str = row.role
-    if state.settings.mfa_enforce and state.policy.mfa_required(role) and not principal.has_mfa():
+    if state.policy.mfa_required(role) and not principal.has_mfa():
         raise mfa_required()
     context.org_id_var.set(str(org_id))
     context.tenant_id_var.set(row.tenant_id)
@@ -173,7 +173,7 @@ async def staff_context(request: Request, state: StateDep, principal: PrincipalD
     roles = frozenset(r for r in principal.realm_roles if r in STAFF_ROLES)
     if not roles:
         raise forbidden("No staff role assigned.")
-    if state.settings.mfa_enforce and not principal.has_mfa():
+    if not principal.has_mfa():
         raise mfa_required()
     perms: set[str] = set()
     for r in roles:

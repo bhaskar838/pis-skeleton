@@ -49,6 +49,21 @@ CONTROL_ROUTES: dict[str, str] = {
     "GET /v1/admin/flags": "staff",
     "PUT /v1/admin/flags": "staff",
     "DELETE /v1/admin/flags/{key}": "staff",
+    # control panel (Phase 0.5)
+    "GET /v1/admin/config": "staff",
+    "PUT /v1/admin/config/{key}": "staff",
+    "DELETE /v1/admin/config/{key}": "staff",
+    "GET /v1/admin/config/{key}/history": "staff",
+    "POST /v1/admin/config/{key}/revert/{version}": "staff",
+    "PUT /v1/admin/secrets/{key}": "staff",
+    "DELETE /v1/admin/secrets/{key}": "staff",
+    "GET /v1/admin/regions": "staff",
+    "POST /v1/admin/regions": "staff",
+    "PATCH /v1/admin/regions/{code}": "staff",
+    "GET /v1/admin/countries": "staff",
+    "PATCH /v1/admin/countries/{code}": "staff",
+    "GET /v1/public/brand": "public",
+    "GET /v1/public/countries": "public",
 }
 
 DATA_ROUTES: dict[str, str] = {"GET /v1/tenant": "tenant"}
@@ -62,6 +77,11 @@ BODIES: dict[str, Any] = {
     },
     "POST /v1/admin/tenants/{org_id}/deprovision": {"confirm_slug": "x", "reason": "attack"},
     "PUT /v1/admin/flags": {"key": "system.maintenance", "scope": "global", "value": True},
+    "PUT /v1/admin/config/{key}": {"value": "pwned"},
+    "PUT /v1/admin/secrets/{key}": {"value": "pwned"},
+    "POST /v1/admin/regions": {"code": "xx-evil-1", "name": "Evil"},
+    "PATCH /v1/admin/regions/{code}": {"status": "disabled"},
+    "PATCH /v1/admin/countries/{code}": {"signup_enabled": True},
 }
 
 
@@ -168,6 +188,14 @@ async def test_staff_routes_reject_customer_tokens(control: Any, tenants: dict[s
     a = tenants["a"]
     r = await call(control.client, route, b_ids(tenants), control.auth(a["token"], a["org"]["id"]))
     assert r.status_code == 403, f"{route} → {r.status_code}"
+
+
+@pytest.mark.parametrize("route", sorted(r for r, c in CONTROL_ROUTES.items() if c == "public"))
+async def test_public_routes_serve_no_tenant_data(control: Any, tenants: dict[str, Any], route: str) -> None:
+    r = await call(control.client, route, {"token": "y" * 43}, {})
+    assert r.status_code < 500
+    for t in (tenants["a"], tenants["b"]):
+        assert t["org"]["id"] not in r.text and t["org"]["tenant_id"] not in r.text
 
 
 async def test_user_routes_do_not_leak_other_tenants(control: Any, tenants: dict[str, Any]) -> None:

@@ -109,6 +109,7 @@ async def create_invite(
     if not state.policy.can_assign(ctx.role, body.role):
         raise forbidden(f"Your role cannot grant the {body.role} role.")
     token = secrets.token_urlsafe(32)
+    ttl_days = await state.config.get_int("chassis.invite_ttl_days")
     async with state.db.org_tx(ctx.org_id, ctx.user.id) as s:
         already = await s.scalar(
             select(Membership.id)
@@ -134,7 +135,7 @@ async def create_invite(
             token_hash=token_hash(token),
             status="pending",
             invited_by=ctx.user.id,
-            expires_at=datetime.now(UTC) + timedelta(days=state.settings.invite_ttl_days),
+            expires_at=datetime.now(UTC) + timedelta(days=ttl_days),
         )
         s.add(invite)
         await s.flush()
@@ -154,10 +155,10 @@ async def create_invite(
     await state.mailer.send(
         Mail(
             to=body.email,
-            subject=f"You're invited to {org_name} on DCS-PIS",
+            subject=f"You're invited to {org_name} on {{product}}",
             text=(
                 f"{ctx.user.name or ctx.user.email} invited you to join {org_name} as {body.role}.\n\n"
-                f"Accept the invitation: {link}\n\nThe link expires in {state.settings.invite_ttl_days} days."
+                f"Accept the invitation: {link}\n\nThe link expires in {ttl_days} days."
             ),
         )
     )

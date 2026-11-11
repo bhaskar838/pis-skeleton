@@ -214,6 +214,7 @@ async def deprovision(
     state: StateDep,
     ctx: TenantsDeprovision,
 ) -> WorkflowStarted:
+    pending_days = body.pending_days or await state.config.get_int("chassis.deprovision_default_pending_days")
     async with state.db.platform_tx() as s:
         org = await s.get(Org, org_id, with_for_update=True)
         if org is None or org.status == "deleted":
@@ -231,12 +232,12 @@ async def deprovision(
             org_id=org_id,
             target_type="org",
             target_id=str(org_id),
-            details={"reason": body.reason, "pending_days": body.pending_days},
+            details={"reason": body.reason, "pending_days": pending_days},
         )
     wf = workflow_id("deprovision", tenant_id, "v1")
     await state.workflows.start(
         DEPROVISION_WORKFLOW,
-        DeprovisionInput(str(org_id), tenant_id, ctx.principal.subject, body.reason, body.pending_days),
+        DeprovisionInput(str(org_id), tenant_id, ctx.principal.subject, body.reason, pending_days),
         workflow_id=wf,
     )
     return WorkflowStarted(workflow_id=wf)

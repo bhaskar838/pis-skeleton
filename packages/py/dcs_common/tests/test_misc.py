@@ -89,18 +89,9 @@ def test_settings(monkeypatch: pytest.MonkeyPatch) -> None:
     assert OidcIssuerSettings(issuer="i", jwks_url="j").resolved_jwks_url() == "j"
 
 
-@pytest.mark.parametrize("env", ["staging", "prod"])
-def test_mfa_cannot_be_disabled_in_production_like_envs(env: str, monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("env", ["local", "ci", "staging", "prod"])
+def test_there_is_no_switch_to_disable_mfa(env: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    # OPEN_QUESTIONS Q5 (founder): MFA is enforced in every environment, so no setting may turn it off.
     monkeypatch.setenv("DCS_ENV", env)
     monkeypatch.setenv("DCS_MFA_ENFORCE", "false")
-    with pytest.raises(ValueError, match="DCS_MFA_ENFORCE=false is not allowed"):
-        DcsSettings()
-
-
-@pytest.mark.parametrize("env", ["local", "ci"])
-def test_mfa_may_be_disabled_for_local_and_ci(env: str, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("DCS_ENV", env)
-    monkeypatch.setenv("DCS_MFA_ENFORCE", "false")
-    assert DcsSettings().mfa_enforce is False
-    monkeypatch.delenv("DCS_MFA_ENFORCE")
-    assert DcsSettings().mfa_enforce is True
+    assert not any("mfa" in name for name in DcsSettings.model_fields)

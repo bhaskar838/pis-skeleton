@@ -16,7 +16,7 @@ from control_api.audit import Actor
 from control_api.deps import CustomerDep, OrgContext, StateDep, UserDep, client_ip, ensure_path_org, require
 from control_api.flags import effective_flags
 from control_api.models import Membership, Org, TenantDb
-from control_api.regions import region_for_country
+from control_api.regions import CountryNotAvailableError, signup_region
 from control_api.schemas import OrgCreate, OrgOut, OrgProfilePatch
 from control_api.workflows.inputs import PROVISION_WORKFLOW, ProvisionInput
 from dcs_cbm import CBM_VERSION
@@ -66,15 +66,21 @@ async def create_org(
         raise ProblemError(
             403, slug="email-unverified", detail="Verify your e-mail address before creating an organisation."
         )
-    try:
-        region = region_for_country(body.country)
-    except ValueError as exc:
-        raise ProblemError(422, detail=str(exc)) from None
-
     async with state.db.unscoped_tx() as session:
         flags = await effective_flags(session, None, None)
-    if not flags.get("system.signup_enabled", True):
-        raise ProblemError(503, slug="signup-disabled", detail="Sign-up is temporarily disabled.")
+        if not flags.get("system.signup_enabled", True):
+            raise ProblemError(503, slug="signup-disabled", detail="Sign-up is temporarily disabled.")
+        try:
+            region = await signup_region(session, body.country)
+        except ValueError as exc:
+            raise ProblemError(422, detail=str(exc)) from None
+        except CountryNotAvailableError as exc:
+            product = await state.config.get_str("body.product_name")
+            raise ProblemError(
+                422,
+                slug="country-not-available",
+                detail=f"{product} is not available in {exc.name or exc.code} yet.",
+            ) from None
 
     async with state.db.user_tx(user.id) as session:
         if key:
@@ -88,7 +94,7 @@ async def create_org(
         created = await session.scalar(
             select(func.count()).select_from(Org).where(Org.created_by == user.id, Org.status != "deleted")
         )
-        if (created or 0) >= state.settings.max_orgs_per_user:
+        if (created or 0) >= await state.config.get_int("chassis.max_orgs_per_user"):
             raise ProblemError(409, slug="org-limit", detail="You have reached the organisation limit.")
 
     org_id = uuid7()

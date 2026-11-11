@@ -10,6 +10,7 @@ from temporalio.contrib.opentelemetry import TracingInterceptor
 from temporalio.service import RPCError
 from temporalio.worker import Worker
 
+from control_api.config import ConfigRegistry
 from control_api.db import Database
 from control_api.infra.keycloak import IdpAdmin, KeycloakAdmin, NoopIdpAdmin
 from control_api.infra.objectstore import ObjectStoreConfig, TenantObjectStore, build_client
@@ -45,16 +46,18 @@ def build_activities(settings: ControlSettings) -> ProvisioningActivities:
         settings.s3_secret_key.get_secret_value(),
         settings.aws_region,
     )
+    db = Database(settings.control_db_url.get_secret_value(), pool_size=5)
+    vault = Vault(build_key_service(settings))
     return ProvisioningActivities(
         settings=settings,
-        db=Database(settings.control_db_url.get_secret_value(), pool_size=5),
-        vault=Vault(build_key_service(settings)),
+        db=db,
+        vault=vault,
         store=TenantObjectStore(
             s3, ObjectStoreConfig(settings.s3_bucket, settings.s3_sse, settings.object_lock_mode)
         ),
         idp=idp,
         publisher=RedisPublisher(settings.redis_url),
-        mailer=SmtpMailer(settings),
+        mailer=SmtpMailer(ConfigRegistry(db, settings, lambda: vault)),
     )
 
 

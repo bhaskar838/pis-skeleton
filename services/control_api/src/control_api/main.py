@@ -9,7 +9,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from control_api.routers import activity, admin, me, orgs, team
+from control_api.routers import activity, admin, me, orgs, panel, public, team
 from control_api.settings import ControlSettings, get_settings
 from control_api.state import AppState
 from control_api.users import UserDirectory
@@ -52,7 +52,15 @@ def create_app(settings: ControlSettings | None = None, state: AppState | None =
         allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE"],
         allow_headers=["Authorization", "Content-Type", "X-DCS-Org", "Idempotency-Key", "X-Request-Id"],
     )
-    for router in (me.router, orgs.router, team.router, activity.router, admin.router):
+    for router in (
+        me.router,
+        orgs.router,
+        team.router,
+        activity.router,
+        admin.router,
+        panel.router,
+        public.router,
+    ):
         app.include_router(router)
     return app
 

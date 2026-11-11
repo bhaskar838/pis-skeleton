@@ -12,38 +12,21 @@ from pydantic import ValidationError
 from control_api.idempotency import validate_key
 from control_api.infra.scram import scram_sha256_verifier
 from control_api.realtime import MemoryPublisher, org_channel, user_channel
-from control_api.regions import INDIA, UK_EU, region_for_country
+from control_api.regions import normalise_country
 from control_api.routers.orgs import slugify
 from control_api.schemas import BusinessProfile, InviteCreate, OrgCreate
 from dcs_common.problem import ProblemError
 
 
-@pytest.mark.parametrize(
-    ("country", "region"),
-    [
-        ("IN", INDIA),
-        ("in", INDIA),
-        ("GB", UK_EU),
-        ("DE", UK_EU),
-        ("CH", UK_EU),
-        ("NO", UK_EU),
-        ("JE", UK_EU),
-        ("GI", UK_EU),
-        ("RE", UK_EU),
-        ("AX", UK_EU),
-        ("AD", UK_EU),
-        ("US", INDIA),
-        ("SG", INDIA),
-    ],
-)
-def test_region_for_country(country: str, region: str) -> None:
-    assert region_for_country(country) == region
+@pytest.mark.parametrize(("raw", "code"), [("in", "IN"), (" gb ", "GB"), ("Xk", "XK")])
+def test_normalise_country(raw: str, code: str) -> None:
+    assert normalise_country(raw) == code
 
 
 @pytest.mark.parametrize("bad", ["", "I", "IND", "1N"])
-def test_region_rejects_bad_codes(bad: str) -> None:
+def test_country_rejects_bad_codes(bad: str) -> None:
     with pytest.raises(ValueError, match="ISO 3166"):
-        region_for_country(bad)
+        normalise_country(bad)
 
 
 def test_scram_verifier_matches_rfc7677_derivation() -> None:

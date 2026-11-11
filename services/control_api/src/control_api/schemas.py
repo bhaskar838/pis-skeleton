@@ -246,7 +246,12 @@ class StaffMeOut(BaseModel):
 class DeprovisionRequest(Strict):
     confirm_slug: str
     reason: str = Field(min_length=3, max_length=500)
-    pending_days: int = Field(default=30, ge=7, le=30)
+    pending_days: int | None = Field(
+        default=None,
+        ge=7,
+        le=30,
+        description="Omit to use the panel default (chassis.deprovision_default_pending_days)",
+    )
 
 
 class WorkflowStarted(BaseModel):
@@ -284,3 +289,115 @@ class FlagUpsert(Strict):
     scope: Literal["global", "plan", "org"]
     scope_id: str = Field(default="", max_length=64)
     value: Any
+
+
+# ------------------------------------------------------------------------------- control panel (P0.5)
+SettingSource = Literal["panel", "environment", "default"]
+
+
+class SettingOut(BaseModel):
+    key: str
+    section: str
+    label: str
+    help: str
+    type: Literal["string", "int", "bool", "enum", "email", "url", "money", "secret"]
+    value: Any = Field(description="Effective value; always null for secrets")
+    default: Any
+    source: SettingSource
+    is_set: bool
+    version: int = Field(description="0 when no panel value is set")
+    updated_by: str | None
+    updated_at: datetime | None
+    min: int | None
+    max: int | None
+    choices: list[str]
+    optional: bool
+    public: bool
+    used_from: str
+    write_permission: str
+
+
+class ConfigSectionOut(BaseModel):
+    id: str
+    name: str
+    description: str
+    settings: list[SettingOut]
+
+
+class DeploymentValueOut(BaseModel):
+    label: str
+    is_set: bool
+    value: str | None = Field(description="Shown only for values that are not sensitive")
+
+
+class ConfigOut(BaseModel):
+    sections: list[ConfigSectionOut]
+    deployment: list[DeploymentValueOut]
+
+
+class SettingUpdate(Strict):
+    value: Any
+
+
+class SecretUpdate(Strict):
+    value: str = Field(min_length=1, max_length=4096)
+
+
+class SettingHistoryOut(BaseModel):
+    version: int
+    action: Literal["set", "reset", "revert", "secret_set", "secret_cleared"]
+    value: Any
+    changed_by: str
+    changed_at: datetime
+
+
+RegionStatusLiteral = Literal["active", "planned", "disabled"]
+
+
+class RegionOut(BaseModel):
+    code: str
+    name: str
+    status: RegionStatusLiteral
+    sort: int
+    countries: int
+    enabled_countries: int
+    live_tenants: int
+
+
+class RegionCreate(Strict):
+    code: str = Field(
+        pattern=r"^[a-z]{2}(-gov)?-[a-z]+-[0-9]$", description="AWS region code, e.g. sa-east-1"
+    )
+    name: str = Field(min_length=1, max_length=60)
+    sort: int = Field(default=100, ge=0, le=10000)
+
+
+class RegionUpdate(Strict):
+    name: str | None = Field(default=None, min_length=1, max_length=60)
+    status: RegionStatusLiteral | None = None
+    sort: int | None = Field(default=None, ge=0, le=10000)
+
+
+class CountryOut(BaseModel):
+    code: str
+    name: str
+    region: str
+    signup_enabled: bool
+
+
+class CountryUpdate(Strict):
+    region: str | None = Field(default=None, pattern=r"^[a-z]{2}(-gov)?-[a-z]+-[0-9]$")
+    signup_enabled: bool | None = None
+
+
+class PublicBrandOut(BaseModel):
+    product_name: str
+    support_email: str
+    terms_url: str
+    privacy_url: str
+
+
+class PublicCountryOut(BaseModel):
+    code: str
+    name: str
+    region: str

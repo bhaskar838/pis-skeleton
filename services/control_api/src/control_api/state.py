@@ -7,8 +7,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from control_api.config import ConfigRegistry
 from control_api.db import Database
-from control_api.mailer import Mailer, SmtpMailer
+from control_api.mailer import Mailer, MemoryMailer, SmtpMailer
 from control_api.realtime import Publisher, RedisPublisher
 from control_api.settings import ControlSettings
 from dcs_authz import Policy, default_policy
@@ -58,6 +59,13 @@ class WorkflowStarter:
             return workflow_id  # idempotent: the same natural key is already running / done
 
 
+def build_vault(settings: ControlSettings) -> Vault | None:
+    """The key service is optional for the API process: without one, only platform secrets are unavailable."""
+    if settings.key_service == "local" and not settings.local_master_key.get_secret_value():
+        return None
+    return Vault(build_key_service(settings))
+
+
 def build_key_service(settings: ControlSettings) -> KeyService:
     if settings.key_service == "aws":
         return AwsKmsKeyService.from_region(settings.aws_region)
@@ -77,6 +85,12 @@ class AppState:
     mailer: Mailer
     policy: Policy = field(default_factory=default_policy)
     vault: Vault | None = None
+    config: ConfigRegistry = field(init=False)
+
+    def __post_init__(self) -> None:
+        self.config = ConfigRegistry(self.db, self.settings, lambda: self.vault)
+        if isinstance(self.mailer, SmtpMailer | MemoryMailer) and self.mailer.config is None:
+            self.mailer.config = self.config
 
     @classmethod
     def from_settings(cls, settings: ControlSettings) -> AppState:
@@ -86,7 +100,8 @@ class AppState:
             validator=TokenValidator(settings.issuers(), JwksCache()),
             workflows=WorkflowStarter(settings),
             publisher=RedisPublisher(settings.redis_url),
-            mailer=SmtpMailer(settings),
+            mailer=SmtpMailer(),
+            vault=build_vault(settings),
         )
 
     async def close(self) -> None:

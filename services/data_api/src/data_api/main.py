@@ -115,7 +115,7 @@ async def tenant_context(
         raise not_found()
     if m.db_status != "ready":
         raise ProblemError(409, slug="tenant-not-ready", detail="The workspace is still being provisioned.")
-    if state.settings.mfa_enforce and state.policy.mfa_required(m.role) and not p.has_mfa():
+    if state.policy.mfa_required(m.role) and not p.has_mfa():
         raise mfa_required()
     context.org_id_var.set(str(org_id))
     context.tenant_id_var.set(m.tenant.tenant_id)

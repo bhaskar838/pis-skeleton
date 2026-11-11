@@ -208,3 +208,63 @@ class IdempotencyRecord(Base):
     status_code: Mapped[int] = mapped_column(Integer, nullable=False)
     response: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     created_at: Mapped[datetime] = _created()
+
+
+# ---------------------------------------------------------------- control panel (Phase 0.5, migration 0002)
+def _now() -> datetime:
+    return datetime.now(UTC)
+
+
+class Region(Base):
+    __tablename__ = "region"
+    code: Mapped[str] = mapped_column(Text, primary_key=True)  # AWS region code
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(Text, nullable=False)  # active | planned | disabled
+    sort: Mapped[int] = mapped_column(Integer, nullable=False, default=100)
+    updated_by: Mapped[str | None] = mapped_column(Text)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_now)
+
+
+class Country(Base):
+    __tablename__ = "country"
+    code: Mapped[str] = mapped_column(Text, primary_key=True)  # ISO 3166-1 alpha-2 (+ XK)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    region_code: Mapped[str] = mapped_column(Text, ForeignKey("region.code"), nullable=False)
+    signup_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    updated_by: Mapped[str | None] = mapped_column(Text)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_now)
+
+
+class PlatformSetting(Base):
+    __tablename__ = "platform_setting"
+    key: Mapped[str] = mapped_column(Text, primary_key=True)
+    value: Mapped[Any] = mapped_column(JSONB, nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    updated_by: Mapped[str] = mapped_column(Text, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class PlatformSettingHistory(Base):
+    __tablename__ = "platform_setting_history"
+    __table_args__ = (UniqueConstraint("key", "version"),)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    key: Mapped[str] = mapped_column(Text, nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    action: Mapped[str] = mapped_column(
+        Text, nullable=False
+    )  # set | reset | revert | secret_set | secret_cleared
+    value: Mapped[Any | None] = mapped_column(JSONB)
+    changed_by: Mapped[str] = mapped_column(Text, nullable=False)
+    changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class PlatformSecret(Base):
+    __tablename__ = "platform_secret"
+    key: Mapped[str] = mapped_column(Text, primary_key=True)
+    ciphertext: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    nonce: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    key_ref: Mapped[str] = mapped_column(Text, nullable=False)
+    wrapped_dek: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    updated_by: Mapped[str] = mapped_column(Text, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
