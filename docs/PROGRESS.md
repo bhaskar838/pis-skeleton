@@ -2,7 +2,7 @@
 
 | Phase | Status | Started | Gate passed | Tag | Notes |
 |---|---|---|---|---|---|
-| P0 Foundations | 🟨 awaiting sign-off | 2026-11-06 | | | All 6 acceptance criteria ✅ with evidence (`docs/phases/PHASE_0_GATE.md`); CI run #2 8/8 green |
+| P0 Foundations | ✅ passed | 2026-11-06 | 2026-11-11 | v0.0.0 | GO signed by the founder; evidence in `docs/phases/PHASE_0_GATE.md` |
 | P1 Floor 1a: Files & Raw Zone | ⬜ not started | | | | |
 | P2 Floor 2a: Profiling, CBM, LLM Mapping, Transform | ⬜ not started | | | | |
 | P3 Floor 3: Engine Bay & Marketplace | ⬜ not started | | | | |

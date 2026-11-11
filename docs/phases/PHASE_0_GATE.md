@@ -1,5 +1,5 @@
 # Phase 0 Gate — Foundations
-Date: 2026-11-06 | Commit: b332801 | Tag: v0.0.0 (after sign-off) | Reviewer: —
+Date: 2026-11-06 | Commit: b332801 | Tag: v0.0.0 | Reviewer: founder (BHASKAR2411)
 
 Environment for all evidence: Windows 11, Docker Desktop 28 (8 GB VM — half the spec's 16 GB laptop), Python 3.12.13
 (uv), Node 22.12, pnpm 9.15. Raw outputs are referenced by the command that produces them.
@@ -51,7 +51,7 @@ None of the §17 contracts are touched in Phase 0. ADR-0001…0010 written (`doc
 | CSP uses `'unsafe-inline'` scripts | Next.js hydration; move to nonce-based CSP in P9 |
 | Break-glass flow | M-03/M-12 show the empty state; implemented with P9 |
 
-## Go / No-Go: ☐ GO ☐ NO-GO   — signed: …
+## Go / No-Go: ☒ GO ☐ NO-GO   — signed: founder (BHASKAR2411), 2026-11-11 ("Phase 0 is GO", given in the build chat and recorded by the builder)
 
 Builder's assessment: all six acceptance criteria have evidence. Recommend GO. OPEN_QUESTIONS Q1–Q8 resolved on
 2026-11-06 (Q3 extended the London region to EU outermost regions and UK Crown Dependencies; Q5 now refuses
