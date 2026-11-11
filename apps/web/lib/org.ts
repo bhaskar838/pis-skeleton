@@ -25,21 +25,16 @@ export const ROLE_LABELS: Record<Membership["role"], string> = {
   billing: "Billing",
 };
 
-export const COUNTRIES: { code: string; name: string }[] = [
-  { code: "IN", name: "India" },
-  { code: "GB", name: "United Kingdom" },
-  { code: "IE", name: "Ireland" },
-  { code: "DE", name: "Germany" },
-  { code: "FR", name: "France" },
-  { code: "NL", name: "Netherlands" },
-  { code: "ES", name: "Spain" },
-  { code: "IT", name: "Italy" },
-  { code: "AE", name: "United Arab Emirates" },
-  { code: "SG", name: "Singapore" },
-  { code: "US", name: "United States" },
-  { code: "AU", name: "Australia" },
-];
+// AWS region display names. Which regions exist and which countries map to them is set in the control panel.
+const REGION_NAMES: Record<string, string> = {
+  "ap-south-1": "India (Mumbai)",
+  "eu-west-2": "UK / Europe (London)",
+  "us-east-1": "Americas (N. Virginia)",
+  "ap-southeast-1": "Asia-Pacific (Singapore)",
+  "sa-east-1": "South America (São Paulo)",
+  "ap-southeast-2": "Australia (Sydney)",
+};
 
 export function regionLabel(region: string): string {
-  return region === "eu-west-2" ? "UK / EU (London)" : region === "ap-south-1" ? "India (Mumbai)" : region;
+  return REGION_NAMES[region] ?? region;
 }

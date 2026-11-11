@@ -9,9 +9,10 @@ import { call } from "@/lib/api";
 import { requireContext } from "@/lib/context";
 import { visibleNav } from "@/lib/nav";
 import { outcomeOf } from "@/lib/problem";
+import { getBrand } from "@/lib/brand";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
-  const { me, membership } = await requireContext();
+  const [{ me, membership }, brand] = await Promise.all([requireContext(), getBrand()]);
   const org = membership.org_id;
 
   // Central gates: MFA step-up for owners/admins and maintenance mode (flags are evaluated per org).
@@ -30,7 +31,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             <rect width="32" height="32" rx="7" fill="currentColor" className="text-primary" />
             <path d="M9 9h7a7 7 0 0 1 0 14H9z" fill="none" stroke="white" strokeWidth="3" />
           </svg>
-          DCS-PIS
+          {brand.product_name}
         </Link>
         <Sidebar items={visibleNav(membership.permissions)} />
       </aside>

@@ -5,15 +5,17 @@ import { useActionState } from "react";
 
 import type { ActionState } from "@/app/actions";
 import { FormMessage, SubmitButton } from "@/components/submit-button";
-import { COUNTRIES } from "@/lib/org";
+import type { SignupCountry } from "@/lib/brand";
 
 export function OrgForm({
   action,
   submitLabel,
+  countries,
   idempotencyKey,
 }: {
   action: (state: ActionState | null, form: FormData) => Promise<ActionState>;
   submitLabel: string;
+  countries: SignupCountry[];
   idempotencyKey?: string;
 }) {
   const [state, formAction] = useActionState(action, null);
@@ -26,13 +28,13 @@ export function OrgForm({
       <Field
         label="Country"
         htmlFor="country"
-        hint="Decides where your data is stored (India or UK/EU). This cannot be changed later."
+        hint="Decides where your data is stored. This cannot be changed later. Not listed? We are not available in your country yet."
       >
-        <Select id="country" name="country" required defaultValue="">
+        <Select id="country" name="country" required defaultValue="" disabled={countries.length === 0}>
           <option value="" disabled>
-            Choose a country
+            {countries.length ? "Choose a country" : "Sign-up is unavailable right now"}
           </option>
-          {COUNTRIES.map((c) => (
+          {countries.map((c) => (
             <option key={c.code} value={c.code}>
               {c.name}
             </option>

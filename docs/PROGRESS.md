@@ -24,5 +24,5 @@
 - Break-glass access flow (M-03 / M-12 show empty states) → P9.
 
 ## Open questions
-See `docs/OPEN_QUESTIONS.md`. All resolved except F2 (proposed, confirm before P2). Deferred by the founder: Q7's
-retention period (after app completion), F6's final product name.
+See `docs/OPEN_QUESTIONS.md`. All resolved (F2: Claude Haiku 5.5 on Bedrock, editable in the panel). Deferred by
+the founder: Q7's retention period (after app completion), F6's final product name.

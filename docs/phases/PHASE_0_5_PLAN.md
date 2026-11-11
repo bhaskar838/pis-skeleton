@@ -27,19 +27,19 @@ but never read back. Sign-up follows a world-wide, editable country → region m
 
 | ID | Task | Main files | Status |
 |---|---|---|---|
-| P05-T1 | Remove the MFA switch (always enforced) | `dcs_common/settings.py`, `control_api/deps.py`, `data_api/main.py` | ⬜ |
-| P05-T2 | Control DB migration 0002: `region`, `country`, `platform_setting`, `platform_setting_history`, `platform_secret` + RLS + grants; seed the world map | `migrations/versions/0002_control_panel.py`, `control_api/world.py` | ⬜ |
-| P05-T3 | Settings catalog + validation (types: string, int, bool, enum, email, url, money, secret) | `control_api/config/catalog.py` | ⬜ |
-| P05-T4 | `ConfigRegistry`: effective value (panel > environment > default), 3 s cache, set / reset / history / revert, sealed secrets, audit | `control_api/config/registry.py` | ⬜ |
-| P05-T5 | Wire the registry into callers: org limit, invite TTL, deprovision window, SMTP mailer, product name in e-mails | `routers/orgs.py`, `routers/team.py`, `mailer.py`, `notifications.py` | ⬜ |
-| P05-T6 | Region rules: sign-up resolves the country from the DB, refuses disabled countries; region / country editing rules | `control_api/regions.py`, `routers/admin_regions.py` | ⬜ |
-| P05-T7 | Admin API: `/v1/admin/config*`, `/v1/admin/secrets/*`, `/v1/admin/regions*`, `/v1/admin/countries*`; public `/v1/public/brand`, `/v1/public/countries` | `routers/admin_config.py`, `routers/public.py` | ⬜ |
-| P05-T8 | RBAC: `platform:config:read/write`, `platform:secrets:write`, `platform:regions:write` | `dcs_authz/policies.yaml` | ⬜ |
-| P05-T9 | Admin UI in the car layout: nav groups, instrument-cluster dashboard, Chassis, Body, Electricals, Trims & options, Wheels / Fuel lines / Engine bay (what arrives when), Switchgear, Locks & keys; generic setting editor with history and revert; write-only secret editor | `apps/admin` | ⬜ |
-| P05-T10 | Web: product name from `/v1/public/brand`; create-org country list from `/v1/public/countries`; "not available in your country yet" | `apps/web` | ⬜ |
-| P05-T11 | OpenAPI export + regenerate `@dcs/api-client`; isolation classifier for the new routes | `packages/ts/api-client`, `tests/isolation` | ⬜ |
-| P05-T12 | Tests: unit (catalog, world map, validation), integration (registry, secrets, audit, revert, sign-up rules, RBAC), isolation, E2E (rename product → visible; sign-up country gate) | `services/control_api/tests`, `tests/e2e` | ⬜ |
-| P05-T13 | Docs: OPEN_QUESTIONS, PROGRESS, CLAUDE.md repo map, gate report | `docs/` | ⬜ |
+| P05-T1 | Remove the MFA switch (always enforced) | `dcs_common/settings.py`, `control_api/deps.py`, `data_api/main.py` | ✅ |
+| P05-T2 | Control DB migration 0002: `region`, `country`, `platform_setting`, `platform_setting_history`, `platform_secret` + RLS + grants; seed the world map | `migrations/versions/0002_control_panel.py`, `control_api/world.py` | ✅ |
+| P05-T3 | Settings catalog + validation (types: string, int, bool, enum, email, url, money, secret) | `control_api/config/catalog.py` | ✅ |
+| P05-T4 | `ConfigRegistry`: effective value (panel > environment > default), 3 s cache, set / reset / history / revert, sealed secrets, audit | `control_api/config/registry.py` | ✅ |
+| P05-T5 | Wire the registry into callers: org limit, invite TTL, deprovision window, SMTP mailer, product name in e-mails | `routers/orgs.py`, `routers/team.py`, `mailer.py`, `notifications.py` | ✅ |
+| P05-T6 | Region rules: sign-up resolves the country from the DB, refuses disabled countries; region / country editing rules | `control_api/regions.py`, `routers/admin_regions.py` | ✅ |
+| P05-T7 | Admin API: `/v1/admin/config*`, `/v1/admin/secrets/*`, `/v1/admin/regions*`, `/v1/admin/countries*`; public `/v1/public/brand`, `/v1/public/countries` | `routers/admin_config.py`, `routers/public.py` | ✅ |
+| P05-T8 | RBAC: `platform:config:read/write`, `platform:secrets:write`, `platform:regions:write` | `dcs_authz/policies.yaml` | ✅ |
+| P05-T9 | Admin UI in the car layout: nav groups, instrument-cluster dashboard, Chassis, Body, Electricals, Trims & options, Wheels / Fuel lines / Engine bay (what arrives when), Switchgear, Locks & keys; generic setting editor with history and revert; write-only secret editor | `apps/admin` | ✅ |
+| P05-T10 | Web: product name from `/v1/public/brand`; create-org country list from `/v1/public/countries`; "not available in your country yet" | `apps/web` | ✅ |
+| P05-T11 | OpenAPI export + regenerate `@dcs/api-client`; isolation classifier for the new routes | `packages/ts/api-client`, `tests/isolation` | ✅ |
+| P05-T12 | Tests: unit (catalog, world map, validation), integration (registry, secrets, audit, revert, sign-up rules, RBAC), isolation, E2E (rename product → visible; sign-up country gate) | `services/control_api/tests`, `tests/e2e` | ✅ |
+| P05-T13 | Docs: OPEN_QUESTIONS, PROGRESS, CLAUDE.md repo map, gate report | `docs/` | ✅ |
 
 ## Acceptance criteria
 - [ ] Every operator-owned value in the P0 code paths is either a registry setting or listed as deployment-owned

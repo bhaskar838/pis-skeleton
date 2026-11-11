@@ -309,6 +309,29 @@ CATALOG: Final[tuple[SettingDef, ...]] = (
         {},
         used_from="P6",
     ),
+    # ---- Fuel lines: LLM-assisted mapping (F2: a cheap, strong model on Amazon Bedrock)
+    SettingDef(
+        "fuel_lines.mapping_model",
+        "fuel_lines",
+        "Mapping model (Amazon Bedrock)",
+        "Bedrock model or inference-profile ID that proposes field mappings. Default Claude Haiku 5.5: low cost, "
+        "strong at classification. Switch to anthropic.claude-sonnet-5-5 if the mapping evaluation needs more.",
+        "string",
+        "anthropic.claude-haiku-5-5",
+        max_length=200,
+        used_from="P2",
+    ),
+    SettingDef(
+        "fuel_lines.mapping_effort",
+        "fuel_lines",
+        "Mapping effort",
+        "How hard the model thinks per request. Lower is cheaper and faster; raise it only if the evaluation shows "
+        "better mappings.",
+        "enum",
+        "medium",
+        choices=("low", "medium", "high"),
+        used_from="P2",
+    ),
 )
 
 SETTINGS_BY_KEY: Final[dict[str, SettingDef]] = {d.key: d for d in CATALOG}

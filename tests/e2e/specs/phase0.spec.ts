@@ -98,7 +98,36 @@ test("staff console: first login (password change + TOTP) → M-02 lists the ten
     await staff.waitForLoadState("domcontentloaded");
   }
   await staff.waitForURL(/localhost:3001\/$/);
-  await expect(staff.getByRole("heading", { name: "Platform dashboard" })).toBeVisible();
+  await expect(staff.getByRole("heading", { name: "Instrument cluster" })).toBeVisible();
   await staff.getByRole("link", { name: "Tenants" }).click();
   await expect(staff.getByRole("link", { name: "Northwind Fitness" }).first()).toBeVisible();
+
+  // Phase 0.5 (ADR-0011): a Body change in the control panel reaches the customer app without a deploy.
+  await staff.getByRole("link", { name: "Brand & legal" }).click();
+  await staff.getByLabel("Product name value").fill("Northwind Panel Check");
+  await staff.getByRole("button", { name: "Save" }).first().click();
+  await expect(staff.getByText(/Saved\. Live everywhere/)).toBeVisible();
+  const visitor = await browser.newPage();
+  await expect(async () => {
+    await visitor.goto(`${process.env.E2E_WEB_URL ?? "http://localhost:3000"}/auth/sign-in`);
+    await expect(visitor.getByText("Use your Northwind Panel Check account", { exact: false })).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 20_000 });
+  await staff.getByRole("button", { name: "Reset to default" }).click();
+  await expect(staff.getByLabel("Product name value")).toHaveValue("DCS-PIS");
+
+  // Chassis: the four-region world map with India and Europe live (ADR-0012).
+  await staff.getByRole("link", { name: "Regions & limits" }).click();
+  const regions = staff.getByRole("table").first();
+  await expect(regions.getByRole("row", { name: /Mumbai.*active/ })).toBeVisible();
+  await expect(regions.getByRole("row", { name: /N\. Virginia.*planned/ })).toBeVisible();
+  await visitor.close();
+});
+
+test("sign-up offers only the countries open in the control panel", async ({ page }) => {
+  await page.goto("/auth/sign-up");
+  const country = page.getByLabel("Country");
+  await expect(country.locator("option[value=IN]")).toHaveCount(1);
+  await expect(country.locator("option[value=DE]")).toHaveCount(1);
+  await expect(country.locator("option[value=US]")).toHaveCount(0);
+  await expect(country.locator("option[value=SG]")).toHaveCount(0);
 });

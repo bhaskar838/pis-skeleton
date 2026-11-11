@@ -9,18 +9,21 @@ import { call } from "@/lib/api";
 import { visibleAdminNav } from "@/lib/nav";
 
 export default async function ConsoleLayout({ children }: { children: ReactNode }) {
-  const me = await call<Schemas["StaffMeOut"]>("/v1/admin/me");
+  const [me, brand] = await Promise.all([
+    call<Schemas["StaffMeOut"]>("/v1/admin/me"),
+    call<Schemas["PublicBrandOut"]>("/v1/public/brand"),
+  ]);
   if (!me.ok) {
     if (me.status === 401 || me.status === 403) redirect("/auth/sign-in");
     return <ErrorState description="The control API is unavailable." />;
   }
   return (
     <div className="flex min-h-screen">
-      <aside className="hidden w-60 shrink-0 border-r border-border bg-sidebar md:block">
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 overflow-y-auto border-r border-border bg-sidebar md:block">
         <div className="flex h-14 items-center gap-2 border-b border-border px-5 font-semibold">
-          DCS-PIS <Badge tone="warning">Staff</Badge>
+          {brand.ok ? brand.data.product_name : "DCS-PIS"} <Badge tone="warning">Control panel</Badge>
         </div>
-        <AdminSidebar items={visibleAdminNav(me.data.permissions)} />
+        <AdminSidebar groups={visibleAdminNav(me.data.permissions)} />
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 items-center justify-end gap-3 border-b border-border px-4 text-sm">

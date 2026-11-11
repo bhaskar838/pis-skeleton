@@ -101,7 +101,8 @@ describe("org helpers", () => {
     expect(assignableRoles("analyst")).toEqual([]);
     expect(regionLabel("ap-south-1")).toMatch(/India/);
     expect(regionLabel("eu-west-2")).toMatch(/London/);
-    expect(regionLabel("us-east-1")).toBe("us-east-1");
+    expect(regionLabel("us-east-1")).toMatch(/Virginia/);
+    expect(regionLabel("xx-new-9")).toBe("xx-new-9");
   });
 });
 

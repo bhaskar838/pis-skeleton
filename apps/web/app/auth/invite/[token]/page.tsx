@@ -6,6 +6,7 @@ import { call } from "@/lib/api";
 import { ROLE_LABELS } from "@/lib/org";
 import { problemMessage } from "@/lib/problem";
 import { getAccessToken } from "@/lib/session";
+import { getBrand } from "@/lib/brand";
 
 import { startSignIn } from "../../actions";
 import { AcceptInviteForm } from "./accept-form";
@@ -20,7 +21,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
     return <ErrorState title="This invitation isn't valid" description={problemMessage(preview.problem)} />;
   }
   const invite = preview.data;
-  const signedIn = Boolean(await getAccessToken());
+  const [signedIn, brand] = await Promise.all([getAccessToken().then(Boolean), getBrand()]);
   const returnTo = `/auth/invite/${token}`;
   return (
     <Card>
@@ -44,7 +45,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
               </Button>
             </form>
             <p className="text-center text-sm text-muted-foreground">
-              New to DCS-PIS? Choose &ldquo;Register&rdquo; on the sign-in page using the invited e-mail address.
+              New to {brand.product_name}? Choose &ldquo;Register&rdquo; on the sign-in page using the invited e-mail address.
             </p>
           </div>
         )}

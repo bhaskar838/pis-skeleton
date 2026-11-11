@@ -8,9 +8,9 @@ import { call } from "@/lib/api";
 
 import { FlagForm } from "./flag-form";
 
-export const metadata: Metadata = { title: "Settings & flags" };
+export const metadata: Metadata = { title: "Switchgear · feature flags" };
 
-// M-13: feature flags per global / plan / org, maintenance mode.
+// M-13 (Switchgear): feature flags per global / plan / org, maintenance mode.
 export default async function SettingsPage() {
   const [flags, me] = await Promise.all([
     call<Schemas["FlagRow"][]>("/v1/admin/flags"),
@@ -21,7 +21,7 @@ export default async function SettingsPage() {
   const maintenance = flags.data.find((f) => f.key === "system.maintenance" && f.scope === "global")?.value === true;
   return (
     <>
-      <PageHeader title="Settings & feature flags" description="Org overrides beat plan overrides, which beat global values." />
+      <PageHeader title="Switchgear" description="Feature flags and kill switches. Org overrides beat plan overrides, which beat global values." />
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

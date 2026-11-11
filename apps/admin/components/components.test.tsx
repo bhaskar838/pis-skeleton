@@ -10,11 +10,12 @@ const { FormMessage, SubmitButton } = await import("./form-bits");
 
 describe("AdminSidebar", () => {
   it("marks the current section and disables future pages", () => {
-    render(<AdminSidebar items={visibleAdminNav(["platform:dashboard:read", "platform:tenants:read"])} />);
+    render(<AdminSidebar groups={visibleAdminNav(["platform:dashboard:read", "platform:tenants:read"])} />);
     expect(screen.getByRole("link", { name: "Tenants" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: "Dashboard" })).not.toHaveAttribute("aria-current");
+    expect(screen.getByRole("link", { name: "Instrument cluster" })).not.toHaveAttribute("aria-current");
     expect(screen.getByText("Connectors").closest("[aria-disabled]")).toBeInTheDocument();
-    expect(screen.queryByText("Settings & flags")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Cabin" })).toBeInTheDocument();
+    expect(screen.queryByText("Feature flags")).not.toBeInTheDocument();
   });
 });
 

@@ -2,6 +2,8 @@ import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Noti
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { getBrand } from "@/lib/brand";
+
 import { startSignIn } from "../actions";
 
 export const metadata: Metadata = { title: "Sign in" };
@@ -12,13 +14,13 @@ export default async function SignInPage({
 }: {
   searchParams: Promise<{ callbackUrl?: string; signed_out?: string; error?: string }>;
 }) {
-  const params = await searchParams;
+  const [params, brand] = await Promise.all([searchParams, getBrand()]);
   const returnTo = params.callbackUrl?.startsWith("/") ? params.callbackUrl : "/";
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-xl">Sign in</CardTitle>
-        <CardDescription>Use your DCS-PIS account. Owners and admins confirm with a second factor.</CardDescription>
+        <CardDescription>Use your {brand.product_name} account. Owners and admins confirm with a second factor.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {params.signed_out ? <Notice tone="success">You have been signed out.</Notice> : null}
